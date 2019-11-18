@@ -1,0 +1,127 @@
+---
+title: "KERNEL-BASED MACHINE LEARNING AND MULTIVARIATE MODELLING: Kernel PCA"
+author: "Ricard Meyerhofer Parra"
+date: "4/10/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo <- TRUE)
+library("kableExtra")
+
+```
+
+## Dataset
+
+In this problem we are going to use a dataset from Kaggle which is named Social Network Ads. This dataset is a categorical dataset to determine whether a user purchased a particular product or not. The variables contained in the dataset, are the following:
+
+
+Variable  | Description                           | Attribute type
+:--------------:|:--------------------------------------------------------------------------------------:|:------:
+User ID | Id of the user | Numeric
+Gender | Gender of the user either Male or Female| Categorical
+Age | Age of the user | Numeric
+Estimated Salary |  Income of the user in dollars | Numeric
+Purchased | Response variable | Categorical
+
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+dataset <- read.csv('Social_Network_Ads.csv')
+dataset <- dataset[, 3:5]
+```
+
+The dataset is complete which means that does not have any missings. This does not imply that it does not have outliers but we are going to suppose that there are none. Because of it, we are not going to do any kind of imputations or modifications to our initial data.
+
+Once we have read the dataset, we are going to split the dataset composed of 401 elements in train and test with a proportion of 75-25 respectively. Also we are going to scale the dataset both, test and train.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+# Splitting into the Training and Test
+library(caTools)
+set.seed(123)
+split <- sample.split(dataset$Purchased, SplitRatio <- 0.75)
+training_set <- subset(dataset, split == TRUE)
+test_set <- subset(dataset, split == FALSE)
+# Scaling
+training_set[, 1:2] <- scale(training_set[, 1:2])
+test_set[, 1:2] <- scale(test_set[, 1:2])
+```
+
+
+##Kernel PCA
+
+Once we have read our dataset, now we are going to apply the Kernel PCA. We will choose $rbfdot$ kernel as is the one that suits best our data. We need to execute the following function which calculates the eigenvalues.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+library(kernlab)
+kpca <- kpca(~., data = training_set[-3], kernel = 'rbfdot', features = 2)
+training_set_pca <- as.data.frame(predict(kpca, training_set))
+training_set_pca$Purchased <- training_set$Purchased
+test_set_pca <- as.data.frame(predict(kpca, test_set))
+test_set_pca$Purchased <- test_set$Purchased
+```
+
+Now we are going to fit logistic regression to the training set and later we are going to predict on the result set.
+
+```{r, echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+classifier <- glm(formula <- Purchased ~ .,
+                 family <- binomial,
+                 data <- training_set_pca)
+```
+
+
+Below we can see that our accuraccy is the following is pretty good as we can see in the confusion matrix.
+
+```{r}
+# Predicting the Test set results
+prob_pred <- predict(classifier, type = 'response', newdata = test_set_pca[-3])
+y_pred <- ifelse(prob_pred > 0.5, 1, 0)
+# Making the Confusion Matrix
+cm <- table(test_set_pca[, 3], y_pred)
+kable(cm)
+```
+
+## Training results
+
+Here we can see our training results where we can see that we have not build a very specific model and it looks generic enough to perform good in the test subset.
+
+```{r, echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+
+library(ElemStatLearn)
+set <- training_set_pca
+X1 <- seq(min(set[, 1]) - 1, max(set[, 1]) + 1, by <- 0.01)
+X2 <- seq(min(set[, 2]) - 1, max(set[, 2]) + 1, by <- 0.01)
+grid_set <- expand.grid(X1, X2)
+colnames(grid_set) <- c('V1', 'V2')
+prob_set <- predict(classifier, type = 'response', newdata = grid_set)
+y_grid <- ifelse(prob_set > 0.5, 1, 0)
+plot(set[, -3],
+     main = 'Logistic Regression (Training set)',
+     xlab = 'PC1', ylab = 'PC2',
+     xlim = range(X1), ylim = range(X2))
+contour(X1, X2, matrix(as.numeric(y_grid), length(X1), length(X2)), add = TRUE)
+points(grid_set, pch = '.', col = ifelse(y_grid == 1, 'springgreen3', 'tomato'))
+points(set, pch = 21, bg = ifelse(set[, 3] == 1, 'green4', 'red3'))
+```
+
+# Test results
+As we can see in the output below, our model seems to perform quite well
+
+```{r, echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+# Visualising the Test set results
+library(ElemStatLearn)
+set <- test_set_pca
+X1 <- seq(min(set[, 1]) - 1, max(set[, 1]) + 1, by <- 0.01)
+X2 <- seq(min(set[, 2]) - 1, max(set[, 2]) + 1, by <- 0.01)
+grid_set <- expand.grid(X1, X2)
+colnames(grid_set) <- c('V1', 'V2')
+prob_set <- predict(classifier, type = 'response', newdata = grid_set)
+y_grid <- ifelse(prob_set > 0.5, 1, 0)
+plot(set[, -3],
+     main = 'Logistic Regression (Test set)',
+     xlab = 'Age', ylab <- 'Estimated Salary',
+     xlim = range(X1), ylim = range(X2))
+contour(X1, X2, matrix(as.numeric(y_grid), length(X1), length(X2)), add = TRUE)
+points(grid_set, pch = '.', col = ifelse(y_grid == 1, 'springgreen3', 'tomato'))
+points(set, pch = 21, bg = ifelse(set[, 3] == 1, 'green4', 'red3'))
+```
+
