@@ -4,7 +4,7 @@
 ################################################################################
 #Step1:
 ################################################################################
-#Read the “zip_train.dat” and “zip_test.dat” files provided. 
+#Read the "zip_train.dat" and "zip_test.dat" files provided. 
 #Select a 5% random sample (without replacement) of the train data. 
 #Use this sample as your training data, and the complete test data for testing.
 ################################################################################
@@ -51,20 +51,26 @@ Xtest <- testSet[,-1]
 Ytest <- as.matrix(dummy(Ytest))
 Xtest <- as.matrix(Xtest)
 mode(Xtest) <- "double"
-Xtest <- scale(as.numeric(Xtest), center = T, scale = F)
+Xtest <- as.matrix(scale(Xtest, scale = F, center=attr(Xtest, 'scaled:center')))
 
 ################################################################################
 #Step3:
 ################################################################################
 #Perform a multivariate regression with the training data. Compute the average R2.
 ################################################################################
+multiReg <- lm(Y ~ X)
+mreg.summary <- summary(multiReg)
 
+# Computing average R2
+(averageR2 <- mean(sapply(mreg.summary, function(x) x$r.squared)))
 
 ################################################################################
 #Step4:
 ################################################################################
 #Compute the average of the R2 by Leave One Out
 ################################################################################
+PRESS  <- colSums((mreg$residuals/(1-ls.diag(mreg)$hat))^2)
+(R2LOO <- mean(R2cv<- 1-PRESS/(diag(var(Ys))*(n-1))))
 
 ################################################################################
 #Step5:
