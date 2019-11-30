@@ -45,6 +45,7 @@ Xtest <- scale(Xtest, scale = F, center=attr(X, 'scaled:center'))
 #Be aware that Y is not of full rank.  Decide how many components you retain for prediction?
 ###############################################################################################
 
+
 ###############################################################################################
 #Step 4:
 #Predict the responses in the test data, be aware of the appropriate centering. 
@@ -57,3 +58,5 @@ Xtest <- scale(Xtest, scale = F, center=attr(X, 'scaled:center'))
 #Assign every test individual to the maximum response and compute the error rate.
 #Compare the results with the obtained in exercise 1
 ###############################################################################################
+
+
